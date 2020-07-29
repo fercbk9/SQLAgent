@@ -289,8 +289,8 @@ namespace SQLAgent.DataAccessObject
             var list = new List<string>();
             model.GetType().GetProperties().ToList().ForEach(x => 
                 {
-                    if(x.GetCustomAttributes<Models.AttributeModel>().Count() > 0)
-                    if (x.GetCustomAttribute<Models.AttributeModel>().IsPrimaryKey)
+                    if(x.GetCustomAttributes<Attributes.BaseAttribute>().Count() > 0)
+                    if (x.GetCustomAttribute<Attributes.BaseAttribute>().IsPrimaryKey)
                     {
                         list.Add(x.Name);
                     }
