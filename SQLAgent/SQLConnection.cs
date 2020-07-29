@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Dapper;
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 
@@ -171,6 +174,47 @@ namespace SQLAgent
             finally
             {
                 this.CloseConnection();
+            }
+        }
+
+
+        public int Execute(string sql, object param = null)
+        {
+            try
+            {
+                if (SqlConnection.State != ConnectionState.Open)
+                {
+                    OpenConnection();
+                }
+                return SqlConnection.Execute(sql, param);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                CloseConnection();
+            }
+        }
+
+        public IEnumerable<EntityT> Select<EntityT>(string sql, Type type, object param = null)
+        {
+            try
+            {
+                if (SqlConnection.State != ConnectionState.Open)
+                {
+                    OpenConnection();
+                }
+                return SqlConnection.Query<EntityT>(sql, param);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                CloseConnection();
             }
         }
         #endregion

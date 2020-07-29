@@ -55,7 +55,7 @@ namespace SQLAgent.DataAccessObject
         /// <returns></returns>
         public virtual IEnumerable<T> GetAll()
         {
-            return Utilities.Converters.DataTableToList<T>(this.SQLConnection.Select(this.GetSqlCommandText(SQLTypes.SelectAll),null));
+            return this.SQLConnection.Select<T>(this.GetSqlCommandText(SQLTypes.SelectAll),null);
         }
 
         /// <summary>
@@ -65,7 +65,7 @@ namespace SQLAgent.DataAccessObject
         public virtual Task<IEnumerable<T>> GetAllAsync()
         {
             return Task.Run(() => {
-                return Utilities.Converters.DataTableToList<T>(this.SQLConnection.Select(this.GetSqlCommandText(SQLTypes.SelectAll), null));
+                return this.SQLConnection.Select<T>(this.GetSqlCommandText(SQLTypes.SelectAll), null);
             });
         }
 
@@ -220,6 +220,18 @@ namespace SQLAgent.DataAccessObject
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="properties"></param>
+        /// <returns></returns>
+        private string GetPropertyStringForDelete(List<string> primaryKeyProperties)
+        {
+            return "DELETE FROM " + TableName + " WHERE " + primaryKeyProperties.Select(x => x + "=@" + x);
+
+        }
+
+
+        /// <summary>
         /// Devolver Sql para select todo del modelo.
         /// </summary>
         /// <returns></returns>
@@ -271,6 +283,21 @@ namespace SQLAgent.DataAccessObject
             return sqlParameterCollection;
         }
 
+
+        private List<string> GetPrimaryKeyProperties(T model)
+        {
+            var list = new List<string>();
+            model.GetType().GetProperties().ToList().ForEach(x => 
+                {
+                    if(x.GetCustomAttributes<Models.AttributeModel>().Count() > 0)
+                    if (x.GetCustomAttribute<Models.AttributeModel>().IsPrimaryKey)
+                    {
+                        list.Add(x.Name);
+                    }
+                }
+            );
+            return list;
+        }
         #endregion
 
     }
