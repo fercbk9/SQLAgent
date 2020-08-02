@@ -265,7 +265,7 @@ namespace SQLAgent.DataAccessObject
             return " OR ";
         }
 
-        public string Compare<T>(string column)
+        public string Compare(string column)
         {
             return $" {this.TableName}.{column} = @{column} ";
         }

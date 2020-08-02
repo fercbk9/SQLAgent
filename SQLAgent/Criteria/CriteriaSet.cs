@@ -69,7 +69,7 @@ namespace SQLAgent.Criteria
         }
 
 
-        public IEnumerable<EntityT> GetEntities()
+        /*public IEnumerable<EntityT> GetEntities()
         {
             return Utilities.Converters.DataTableToList<EntityT>(SQLConnection.Select(CriteriaSetToSql(), GetParametersFromCriteriaSet()));
         }
@@ -92,7 +92,33 @@ namespace SQLAgent.Criteria
                 
             }
             return collection;
+        }*/
+
+        public IEnumerable<EntityT> GetEntities()
+        {
+            return SQLConnection.Select<EntityT>(CriteriaSetToSql(), GetParametersFromCriteriaSet());
         }
+
+        /// <summary>
+        /// Metodo que devuelve los parametros del criteria para las comparaciones.
+        /// </summary>
+        /// <returns></returns>
+        public Dictionary<string, object> GetParametersFromCriteriaSet()
+        {
+            var collection = new Dictionary<string, object>();
+            int countWhere = 0;
+            foreach (var item in this.cs.Where(x => x.CriteriaType == CriteriaTypes.Comparison))
+            {
+                if (item.CriteriaType == CriteriaTypes.Comparison)
+                {
+                    collection.Add($"{item.Property}{countWhere}", item.Value);
+                    countWhere++;
+                }
+
+            }
+            return collection;
+        }
+
 
         /// <summary>
         /// Metodo que devuelve el criteria como consulta de sql.

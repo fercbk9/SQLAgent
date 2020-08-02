@@ -198,7 +198,7 @@ namespace SQLAgent
             }
         }
 
-        public IEnumerable<EntityT> Select<EntityT>(string sql, Type type, object param = null)
+        public IEnumerable<EntityT> Select<EntityT>(string sql, object param = null)
         {
             try
             {
@@ -208,9 +208,9 @@ namespace SQLAgent
                 }
                 return SqlConnection.Query<EntityT>(sql, param);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw ex;
             }
             finally
             {
