@@ -198,6 +198,13 @@ namespace SQLAgent
             }
         }
 
+        /// <summary>
+        /// Metedo para buscar segun modelo. Con Dapper
+        /// </summary>
+        /// <typeparam name="EntityT"></typeparam>
+        /// <param name="sql"></param>
+        /// <param name="param"></param>
+        /// <returns></returns>
         public IEnumerable<EntityT> Select<EntityT>(string sql, object param = null)
         {
             try
