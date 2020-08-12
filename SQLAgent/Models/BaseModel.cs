@@ -18,6 +18,7 @@ namespace SQLAgent.Models
 
         public string ID { get; set; }
         public string IDName { get; }
+        public int State { get; set; }
 
         public BaseModel() { }
 
