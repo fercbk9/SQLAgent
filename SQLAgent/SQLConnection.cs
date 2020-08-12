@@ -177,7 +177,12 @@ namespace SQLAgent
             }
         }
 
-
+        /// <summary>
+        /// Metodo para ejecturar insert,update, delete con Dapper.
+        /// </summary>
+        /// <param name="sql">Sentencia sql con paramatros si los tiene.</param>
+        /// <param name="param">Parametros para ejecutar la consulta. Si los tiene.</param>
+        /// <returns></returns>
         public int Execute(string sql, object param = null)
         {
             try
@@ -201,9 +206,9 @@ namespace SQLAgent
         /// <summary>
         /// Metedo para buscar segun modelo. Con Dapper
         /// </summary>
-        /// <typeparam name="EntityT"></typeparam>
-        /// <param name="sql"></param>
-        /// <param name="param"></param>
+        /// <typeparam name="EntityT">Clase para mapear el IEnumerable.</typeparam>
+        /// <param name="sql">Sentencia sql con paramatros si los tiene.</param>
+        /// <param name="param">Parametros para ejecutar la consulta. Si los tiene.</param>
         /// <returns></returns>
         public IEnumerable<EntityT> Select<EntityT>(string sql, object param = null)
         {
