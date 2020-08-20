@@ -116,10 +116,10 @@ namespace SQLAgent
         }
 
         /// <summary>
-        /// 
+        /// Metodo que inserta,updatea y borra los registros en bbdd.
         /// </summary>
-        /// <param name="sql"></param>
-        /// <param name="parameters"></param>
+        /// <param name="sql">Cadena de texto con la sentencia SQL.</param>
+        /// <param name="parameters">Parametros de la sentencia SQL.</param>
         /// <returns></returns>
         public int DataManipulation(string sql, SqlParameterCollection parameters)
         {

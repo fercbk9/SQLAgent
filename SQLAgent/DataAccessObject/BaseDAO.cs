@@ -174,7 +174,7 @@ namespace SQLAgent.DataAccessObject
                     sqlCommandText = this.GetPropertyStringForUpdate(properties, model.IDName);
                     break;
                 case SQLTypes.Delete:
-                    sqlCommandText = this.GetPropertyStringForDelete(model.IDName);
+                    sqlCommandText = this.GetPropertyStringForDelete(GetPrimaryKeyProperties(model));
                     break;
                 case SQLTypes.SelectAll:
                     sqlCommandText = this.GetPropertyStringForGetAll();

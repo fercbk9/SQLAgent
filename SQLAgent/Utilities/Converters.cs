@@ -123,5 +123,24 @@ namespace SQLAgent.Utilities
         {
             return (dateTime.Hour * 3600) + (dateTime.Minute * 60) + dateTime.Second;
         }
+
+        /// <summary>
+        /// Metodo para castear IEnumerable de object al tipo sin usar reflection.
+        /// </summary>
+        /// <param name="list">Lista a convertir.</param>
+        /// <param name="type">Tipo al que se desea convertir la lista.</param>
+        /// <returns></returns>
+        private static object Convert(IEnumerable<object> list, Type type)
+        {
+            var GenericCastMethod = typeof(System.Linq.Enumerable)
+                                .GetMethod("Cast", BindingFlags.Public | BindingFlags.Static);
+            var SpecificCastMethod = GenericCastMethod.MakeGenericMethod(type);
+            var IEnumerableAux = SpecificCastMethod.Invoke(null, new object[] { list });
+
+            var GenericToListMethod = typeof(System.Linq.Enumerable)
+              .GetMethod("ToList", BindingFlags.Public | BindingFlags.Static);
+            var SpecificToListMethod = GenericToListMethod.MakeGenericMethod(type);
+            return SpecificToListMethod.Invoke(null, new object[] { IEnumerableAux });
+        }
     }
 }

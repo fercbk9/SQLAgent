@@ -38,6 +38,12 @@ namespace SQLAgent.Models
             this.IDName = idName;
         }
 
+        public BaseModel(SQLSetting sQLSetting, string tableName)
+        {
+            this.sQLSetting = sQLSetting;
+            this.tableName = tableName;
+        }
+
         /// <summary>
         /// Devuelve las propiedades del objeto.
         /// </summary>
