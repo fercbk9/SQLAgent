@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SQLAgent.Interfaces.Relations;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -13,37 +14,35 @@ namespace SQLAgent.Models
     /// </summary>
     public class BaseModel
     {
+
+        #region Properties
         public SQLSetting sQLSetting;
         public string tableName;
-
+        public IDictionary<string, IRelation> Relations = new Dictionary<string, IRelation>();
+        public virtual void ImportRelations() { }
         public string ID { get; set; }
         public string IDName { get; }
         public int State { get; set; }
+        #endregion
 
+        #region Constructor
         public BaseModel() { }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="idName"></param>
-        public BaseModel(string idName)
+        public BaseModel(string tableName, string idName)
         {
-            this.IDName = idName;
-        }
-
-        public BaseModel(SQLSetting sQLSetting, string tableName,string idName)
-        {
-            this.sQLSetting = sQLSetting;
+            this.sQLSetting = Context.SQLContext.sqlSetting;
             this.tableName = tableName;
             this.IDName = idName;
         }
 
-        public BaseModel(SQLSetting sQLSetting, string tableName)
+        public BaseModel(string tableName)
         {
-            this.sQLSetting = sQLSetting;
+            this.sQLSetting = Context.SQLContext.sqlSetting;
             this.tableName = tableName;
         }
+        #endregion
 
+        #region Methods
         /// <summary>
         /// Devuelve las propiedades del objeto.
         /// </summary>
@@ -51,6 +50,8 @@ namespace SQLAgent.Models
         public virtual string[] GetProperties()
         {
             return this.GetType().GetProperties(BindingFlags.Public).Select(x => x.Name).ToArray();
-        } 
+        }
+        #endregion
+
     }
 }

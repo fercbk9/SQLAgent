@@ -14,6 +14,7 @@ namespace SQLAgent.DataAccessObject
     public class BaseDAO<T> : IBaseDAO<T> where T : Models.BaseModel, new ()
     {
         public SQLAgent.SQLConnection SQLConnection { get; }
+        public SQLAgent.SQLManager Manager { get; }
         private readonly string TableName;
 
         /// <summary>
@@ -37,6 +38,12 @@ namespace SQLAgent.DataAccessObject
             this.TableName = tableName;
         }
 
+        public BaseDAO(string tableName)
+        {
+            TableName = tableName;
+            Manager = new SQLManager();
+        }
+
         #region IBaseDAO implementation
 
         /// <summary>
@@ -46,7 +53,7 @@ namespace SQLAgent.DataAccessObject
         /// <returns></returns>
         public virtual int Delete(T model)
         {
-            return this.SQLConnection.DataManipulation(this.GetSqlCommandText(SQLTypes.Delete, this.GetPropertiesCustom(), model), this.GetParameterCollection(model));
+            return Manager.Execute(this.GetSqlCommandText(SQLTypes.Delete, this.GetPropertiesCustom(), model), this.GetParameterCollection(model));
         }
 
         /// <summary>
@@ -55,7 +62,7 @@ namespace SQLAgent.DataAccessObject
         /// <returns></returns>
         public virtual IEnumerable<T> GetAll()
         {
-            return this.SQLConnection.Select<T>(this.GetSqlCommandText(SQLTypes.SelectAll),null);
+            return Manager.Select<T>(this.GetSqlCommandText(SQLTypes.SelectAll),null);
         }
 
         /// <summary>
@@ -65,7 +72,7 @@ namespace SQLAgent.DataAccessObject
         public virtual Task<IEnumerable<T>> GetAllAsync()
         {
             return Task.Run(() => {
-                return this.SQLConnection.Select<T>(this.GetSqlCommandText(SQLTypes.SelectAll), null);
+                return Manager.Select<T>(this.GetSqlCommandText(SQLTypes.SelectAll), null);
             });
         }
 
@@ -117,7 +124,7 @@ namespace SQLAgent.DataAccessObject
         /// <returns></returns>
         public virtual int Insert(T model)
         {
-            return this.SQLConnection.DataManipulation(this.GetSqlCommandText(SQLTypes.Insert, this.GetPropertiesCustom(), model), this.GetParameterCollection(model));
+            return Manager.Execute(this.GetSqlCommandText(SQLTypes.Insert, this.GetPropertiesCustom(), model), this.GetParameterCollection(model));
         }
 
         /// <summary>
@@ -127,7 +134,7 @@ namespace SQLAgent.DataAccessObject
         /// <returns></returns>
         public virtual int Update(T model)
         {
-            return this.SQLConnection.DataManipulation(this.GetSqlCommandText(SQLTypes.Update, this.GetPropertiesCustom(), model), this.GetParameterCollection(model));
+            return Manager.Execute(this.GetSqlCommandText(SQLTypes.Update, this.GetPropertiesCustom(), model), this.GetParameterCollection(model));
         }
 
         #endregion
