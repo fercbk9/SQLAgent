@@ -291,7 +291,6 @@ namespace SQLAgent
                 where = where.Substring(0, where.Length - 3);
             }
             return where;
-
         }
         #endregion
 
