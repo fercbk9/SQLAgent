@@ -248,7 +248,9 @@ namespace SQLAgent
                                 PropertyInfo property = t.GetType().GetProperty(item2.Key);
                                 Type type = relation.ForeignType;
                                 var aux = Activator.CreateInstance(type) as BaseModel;
-                                var ie = SqlConnection.QueryMultiple($"select * from [User]").Read(type);
+                                string sql2 = $"select * from {aux.tableName} {GetWhereWithRelations(relation)}";
+                                Dictionary<string, object> parameters = GetParameters(relation, item);
+                                var ie = SqlConnection.QueryMultiple(sql2,parameters).Read(type);
                                 var Converted = Converters.ConvertCustom(ie, type);
                                 property.SetValue(item, Converted);
                             }
@@ -277,7 +279,7 @@ namespace SQLAgent
             return list;
         }
 
-        private string GetWhereWithRelations(IRelation relation)
+        private string GetWhereWithRelations(IRelation relation) 
         {
             string where = "";
             if (relation.Details.Count() > 0)
@@ -291,6 +293,22 @@ namespace SQLAgent
                 where = where.Substring(0, where.Length - 3);
             }
             return where;
+        }
+
+        private Dictionary<string,object> GetParameters<EntityT>(IRelation relation, EntityT entity) where EntityT : BaseModel, new()
+        {
+            Dictionary<string,object> parameters = null;
+            if (relation.Details.Count() > 0)
+            {
+                parameters = new Dictionary<string, object>();
+                foreach (var relationDetail in relation.Details)
+                {
+                    var property = entity.GetType().GetProperty(relationDetail.ForeignFieldName);
+                    object value = property.GetValue(entity);
+                    parameters.Add(relationDetail.ForeignFieldName,value);
+                }
+            }
+            return parameters;
         }
         #endregion
 

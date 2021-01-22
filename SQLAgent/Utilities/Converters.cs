@@ -132,12 +132,12 @@ namespace SQLAgent.Utilities
         /// <returns></returns>
         public static object ConvertCustom(IEnumerable<object> list, Type type)
         {
-            var GenericCastMethod = typeof(System.Linq.Enumerable)
+            var GenericCastMethod = typeof(Enumerable)
                                 .GetMethod("Cast", BindingFlags.Public | BindingFlags.Static);
             var SpecificCastMethod = GenericCastMethod.MakeGenericMethod(type);
             var IEnumerableAux = SpecificCastMethod.Invoke(null, new object[] { list });
 
-            var GenericToListMethod = typeof(System.Linq.Enumerable)
+            var GenericToListMethod = typeof(Enumerable)
               .GetMethod("ToList", BindingFlags.Public | BindingFlags.Static);
             var SpecificToListMethod = GenericToListMethod.MakeGenericMethod(type);
             return SpecificToListMethod.Invoke(null, new object[] { IEnumerableAux });

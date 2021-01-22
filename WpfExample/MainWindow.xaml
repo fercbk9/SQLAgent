@@ -1,0 +1,71 @@
+﻿<Window x:Class="WpfExample.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WpfExample"
+        xmlns:vm="clr-namespace:WpfExample.ViewModels"
+        xmlns:hc="https://handyorg.github.io/handycontrol"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="25*"></ColumnDefinition>
+            <ColumnDefinition Width="75*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition></RowDefinition>
+            <RowDefinition></RowDefinition>
+        </Grid.RowDefinitions>
+        <DockPanel Grid.Column="0" Grid.RowSpan="2" Grid.Row="0" Background="Green">
+            <!--<Expander Header="Hola">
+                <Border Height="100" BorderThickness="1,0,1,1" BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource SecondaryRegionBrush}" CornerRadius="0,0,4,4"/>
+            </Expander>-->
+            <hc:SideMenu Background="Red">
+                <hc:SideMenuItem Background="DarkRed" Header="Menu Inicial"></hc:SideMenuItem>
+                <hc:SideMenuItem Background="DarkRed" Header="Utilidades" Command="{Binding Command}" CommandParameter="{Binding ElementName=Hola}">
+                    <hc:SideMenuItem Header="Themes">
+                    </hc:SideMenuItem>
+                </hc:SideMenuItem>
+            </hc:SideMenu>
+        </DockPanel>
+        <ListBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding UserGroups}" Name="list">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" Width="200"/>
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid Width="332" Background="#4CFFFFFF">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="132*"/>
+                            <ColumnDefinition Width="200*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition Height="40"/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+                        <Grid Grid.RowSpan="3" Margin="0,0,12,0" Background="Green" Width="120" Height="120" HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding IDUserGroup}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="48" Foreground="White"/>
+                        </Grid>
+                        <TextBlock Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding CodUserGroup}" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding Description}" TextWrapping="Wrap"/>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="6"/>
+                </Style>
+            </ListBox.ItemContainerStyle>
+        </ListBox>
+        <TextBlock Text="Hola" Grid.Row="1" Name="Hola"></TextBlock>
+        <Button Command="{Binding Command}" Grid.Row="1" CommandParameter="{Binding ElementName=Hola}">Pulse</Button>
+    </Grid>
+    <Window.DataContext>
+        <vm:MainViewModel x:Name="MainVM"/>
+    </Window.DataContext>
+</Window>
