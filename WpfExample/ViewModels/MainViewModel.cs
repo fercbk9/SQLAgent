@@ -26,6 +26,7 @@ namespace WpfExample.ViewModels
         public MainViewModel() : base()
         {
             UserGroups = new SQLAgent.SQLManager().SelectDeep<Models.UserGroup>("Select * from [UserGroup]").ToList();
+            var Users = new SQLAgent.SQLManager().SelectDeep<Models.User>("Select * from [User]");
         }
 
         protected override void InitCommands()

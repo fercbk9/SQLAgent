@@ -130,7 +130,7 @@ namespace SQLAgent.Utilities
         /// <param name="list">Lista a convertir.</param>
         /// <param name="type">Tipo al que se desea convertir la lista.</param>
         /// <returns></returns>
-        public static object ConvertCustom(IEnumerable<object> list, Type type)
+        public static object ConvertCustom(object list, Type type)
         {
             var GenericCastMethod = typeof(Enumerable)
                                 .GetMethod("Cast", BindingFlags.Public | BindingFlags.Static);

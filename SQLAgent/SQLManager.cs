@@ -4,6 +4,7 @@ using SQLAgent.Interfaces.Relations;
 using SQLAgent.Models;
 using SQLAgent.Utilities;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -16,10 +17,11 @@ namespace SQLAgent
     public class SQLManager
     {
         #region Properties
-        public SqlConnection SqlConnection { get; set; }
+        private SqlConnection SqlConnection { get; set; }
+        public SqlConnection QueryManager { get; set; }
         #endregion
 
-        #region Constructor
+        #region Constructors
         /// <summary>
         /// Constructor with connection string
         /// </summary>
@@ -29,6 +31,7 @@ namespace SQLAgent
             try
             {
                 SqlConnection = new SqlConnection(connectionString);
+                QueryManager = SqlConnection;
             }
             catch (Exception ex)
             {
@@ -49,6 +52,7 @@ namespace SQLAgent
                 {
                     ConnectionString = $@"Data source = { sqlSetting.Instance }; Initial Catalog = {sqlSetting.DBName }; User = {sqlSetting.User }; Password = {sqlSetting.Pass} "
                 };
+                QueryManager = SqlConnection;
             }
             catch (Exception ex)
             {
@@ -69,6 +73,7 @@ namespace SQLAgent
                 {
                     ConnectionString = $@"Data source = { Context.SQLContext.sqlSetting.Instance }; Initial Catalog = {Context.SQLContext.sqlSetting.DBName }; User = {Context.SQLContext.sqlSetting.User }; Password = {Context.SQLContext.sqlSetting.Pass} "
                 };
+                QueryManager = SqlConnection;
             }
             catch (Exception ex)
             {
@@ -238,7 +243,7 @@ namespace SQLAgent
                 EntityT t = new EntityT();
                 var list = GetComplexProperties<EntityT>();
                 var result = SqlConnection.Query<EntityT>(sql, param, commandType: typeCommand);
-                    if (list.Count() > 0)
+                    if (t.Relations.Count > 0 && list.Count > 0)
                     {
                         foreach (var item in result)
                         {
@@ -250,10 +255,17 @@ namespace SQLAgent
                                 var aux = Activator.CreateInstance(type) as BaseModel;
                                 string sql2 = $"select * from {aux.tableName} {GetWhereWithRelations(relation)}";
                                 Dictionary<string, object> parameters = GetParameters(relation, item);
-                                var ie = SqlConnection.QueryMultiple(sql2,parameters).Read(type);
-                                var Converted = Converters.ConvertCustom(ie, type);
-                                property.SetValue(item, Converted);
-                            }
+                                var ie = SelectDeepV2(sql2,type,parameters);
+                                if (typeof(IEnumerable).IsAssignableFrom(property.PropertyType))
+                                {
+                                    var Converted = Converters.ConvertCustom(ie, type);
+                                    property.SetValue(item, Converted);
+                                }
+                                else
+                                {
+                                    property.SetValue(item, ie.FirstOrDefault());
+                                }
+                        }
                         }
                     }
                     return result;
@@ -264,6 +276,57 @@ namespace SQLAgent
             }
         }
 
+        public IEnumerable<object> SelectDeepV2(string sql,Type type, object param = null, CommandType? typeCommand = null)
+        {
+            try
+            {
+                if (SqlConnection.State != ConnectionState.Open)
+                {
+                    OpenConnection();
+                }
+                
+                var list = GetComplexProperties(type);
+                var aux = Activator.CreateInstance(type) as BaseModel;
+                var result = SqlConnection.QueryMultiple(sql, param, commandType: typeCommand).Read(type);
+                if (aux.Relations.Count > 0 && list.Count > 0)
+                {
+                    foreach (var item in result)
+                    {
+                        foreach (var item2 in list)
+                        {
+                            IRelation relation = aux.Relations[item2.Key];
+                            PropertyInfo property = aux.GetType().GetProperty(item2.Key);
+                            Type type2 = relation.ForeignType;
+                            var aux2 = Activator.CreateInstance(type2) as BaseModel;
+                            string sql2 = $"select * from {aux2.tableName} {GetWhereWithRelations(relation)}";
+                            Dictionary<string, object> parameters = GetParameters(relation, item);
+                            var ie = SelectDeepV2(sql2,type2,parameters);
+                            if (typeof(IEnumerable).IsAssignableFrom(property.PropertyType))
+                            {
+                                var Converted = Converters.ConvertCustom(ie, type2);
+                                property.SetValue(item, Converted);
+                            }
+                            else
+                            {
+                                property.SetValue(item, ie.FirstOrDefault());
+                            }
+                        }
+                    }
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+        #endregion
+        #region Private Methods
+        /// <summary>
+        /// Get the properties with IsComplexProperty = true in the model class.
+        /// </summary>
+        /// <typeparam name="EntityT">Class for get their properties.</typeparam>
+        /// <returns>Dictionary<string, Type></returns>
         private Dictionary<string, Type> GetComplexProperties<EntityT>()
         {
             var list = new Dictionary<string, Type>();
@@ -279,7 +342,22 @@ namespace SQLAgent
             return list;
         }
 
-        private string GetWhereWithRelations(IRelation relation) 
+        private Dictionary<string, Type> GetComplexProperties(Type type)
+        {
+            var list = new Dictionary<string, Type>();
+            type.GetProperties().ToList().ForEach(x =>
+            {
+                if (x.GetCustomAttributes<BaseAttribute>().Count() > 0)
+                    if (x.GetCustomAttribute<BaseAttribute>().IsComplexProperty)
+                    {
+                        list.Add(x.Name, x.GetType());
+                    }
+            }
+            );
+            return list;
+        }
+
+        private string GetWhereWithRelations(IRelation relation)
         {
             string where = "";
             if (relation.Details.Count() > 0)
@@ -295,9 +373,9 @@ namespace SQLAgent
             return where;
         }
 
-        private Dictionary<string,object> GetParameters<EntityT>(IRelation relation, EntityT entity) where EntityT : BaseModel, new()
+        private Dictionary<string, object> GetParameters<EntityT>(IRelation relation, EntityT entity) where EntityT : BaseModel, new()
         {
-            Dictionary<string,object> parameters = null;
+            Dictionary<string, object> parameters = null;
             if (relation.Details.Count() > 0)
             {
                 parameters = new Dictionary<string, object>();
@@ -305,12 +383,27 @@ namespace SQLAgent
                 {
                     var property = entity.GetType().GetProperty(relationDetail.ForeignFieldName);
                     object value = property.GetValue(entity);
-                    parameters.Add(relationDetail.ForeignFieldName,value);
+                    parameters.Add(relationDetail.ForeignFieldName, value);
+                }
+            }
+            return parameters;
+        }
+
+        private Dictionary<string, object> GetParameters(IRelation relation, object entity)
+        {
+            Dictionary<string, object> parameters = null;
+            if (relation.Details.Count() > 0)
+            {
+                parameters = new Dictionary<string, object>();
+                foreach (var relationDetail in relation.Details)
+                {
+                    var property = entity.GetType().GetProperty(relationDetail.ForeignFieldName);
+                    object value = property.GetValue(entity);
+                    parameters.Add(relationDetail.ForeignFieldName, value);
                 }
             }
             return parameters;
         }
         #endregion
-
     }
 }

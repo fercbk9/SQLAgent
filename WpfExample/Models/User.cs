@@ -1,5 +1,6 @@
 ﻿using SQLAgent.Attributes;
 using SQLAgent.Models;
+using SQLAgent.Models.Relations;
 
 namespace WpfExample.Models
 {
@@ -27,6 +28,18 @@ namespace WpfExample.Models
             public static string CodUser = "CodUser";
             public static string Description = "Description";
             public static string IDUserGroup = "IDUserGroup";
+        }
+
+        protected override void ImportRelations()
+        {
+            Relation<User, UserGroup> relation_User = new Relation<User,UserGroup>("User_UserGroup");
+            relation_User.Add(new RelationDetail<User, UserGroup>()
+            {
+                PrimaryField = x => x.IDUserGroup,
+                ForeignField = x => x.IDUserGroup
+            });
+            Relations.Add("UserGroup", relation_User);
+            base.ImportRelations();
         }
     }
 }

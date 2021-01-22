@@ -19,26 +19,28 @@ namespace SQLAgent.Models
         public SQLSetting sQLSetting;
         public string tableName;
         public IDictionary<string, IRelation> Relations = new Dictionary<string, IRelation>();
-        public virtual void ImportRelations() { }
+        protected virtual void ImportRelations() { }
         public string ID { get; set; }
         public string IDName { get; }
         public int State { get; set; }
         #endregion
 
         #region Constructor
-        public BaseModel() { }
+        public BaseModel() { ImportRelations(); }
 
         public BaseModel(string tableName, string idName)
         {
             this.sQLSetting = Context.SQLContext.sqlSetting;
             this.tableName = tableName;
             this.IDName = idName;
+            ImportRelations();
         }
 
         public BaseModel(string tableName)
         {
             this.sQLSetting = Context.SQLContext.sqlSetting;
             this.tableName = tableName;
+            ImportRelations();
         }
         #endregion
 
