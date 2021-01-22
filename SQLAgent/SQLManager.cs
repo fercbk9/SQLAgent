@@ -231,7 +231,14 @@ namespace SQLAgent
                 CloseConnection();
             }
         }
-
+        /// <summary>
+        /// Método que busca según la clase que se pase por reflection. Si tiene atributos complex property los busca tambien y asi sucesivamente.
+        /// </summary>
+        /// <typeparam name="EntityT"></typeparam>
+        /// <param name="sql"></param>
+        /// <param name="param"></param>
+        /// <param name="typeCommand"></param>
+        /// <returns></returns>
         public IEnumerable<EntityT> SelectDeep<EntityT>(string sql,object param = null,CommandType? typeCommand = null) where EntityT : BaseModel, new()
         {
             try
@@ -275,7 +282,14 @@ namespace SQLAgent
                 throw ex;
             }
         }
-
+        /// <summary>
+        /// Método que devuelve una colleccion de objetos sin tipar para poder usar una busqueda progresiva dentro de si mismo. Que se pueda llamar n veces a si mismo.
+        /// </summary>
+        /// <param name="sql"></param>
+        /// <param name="type"></param>
+        /// <param name="param"></param>
+        /// <param name="typeCommand"></param>
+        /// <returns></returns>
         public IEnumerable<object> SelectDeepV2(string sql,Type type, object param = null, CommandType? typeCommand = null)
         {
             try
