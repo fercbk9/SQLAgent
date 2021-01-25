@@ -15,14 +15,40 @@ namespace WpfExample.Models
     {
         public const string TableName = "[UserGroup]";
         [Base(IsPrimaryKey = true)]
-        public string IDUserGroup { get; set; }
+        public string IDUserGroup
+        {
+            get { return base.ID; }
+            set
+            {
+                base.ID = value;
+            }
+        }
         public string CodUserGroup { get; set; }
         public string Description { get; set; }
+        [Base(IsComplexProperty = true,IsUpdateable = true)]
+        public User User { get; set; }
 
 
         public UserGroup()
-            :base(TableName)
+            :base(TableName,Properties.IDUser)
         {
+        }
+
+        protected override void ImportRelations()
+        {
+            Relation<UserGroup, User> relation_User = new Relation<UserGroup, User>("User_UserGroup");
+            relation_User.Add(new RelationDetail<UserGroup, User>()
+            {
+                PrimaryField = x => x.IDUserGroup,
+                ForeignField = x => x.IDUserGroup
+            });
+            Relations.Add("User", relation_User);
+        }
+        public static class Properties
+        {
+            public static string IDUser = "IDUserGroup";
+            public static string CodUser = "CodUserGroup";
+            public static string Description = "Description";
         }
     }
 

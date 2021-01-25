@@ -1,4 +1,5 @@
-﻿using SQLAgent.Interfaces.Relations;
+﻿using SQLAgent.Interfaces;
+using SQLAgent.Interfaces.Relations;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,12 +13,12 @@ namespace SQLAgent.Models
     /// <summary>
     /// 
     /// </summary>
-    public class BaseModel
+    public class BaseModel : IBaseModel
     {
 
         #region Properties
         public SQLSetting sQLSetting;
-        public string tableName;
+        public string tableName { get; set; }
         public IDictionary<string, IRelation> Relations = new Dictionary<string, IRelation>();
         protected virtual void ImportRelations() { }
         public string ID { get; set; }

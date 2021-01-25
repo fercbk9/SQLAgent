@@ -25,8 +25,13 @@ namespace WpfExample.ViewModels
 
         public MainViewModel() : base()
         {
-            UserGroups = new SQLAgent.SQLManager().SelectDeep<Models.UserGroup>("Select * from [UserGroup]").ToList();
-            var Users = new SQLAgent.SQLManager().SelectDeep<Models.User>("Select * from [User]");
+            //var Users = new SQLAgent.SQLManager().SelectDeep<Models.User>("Select * from [User]");
+            var usergroup = new SQLAgent.Criteria.CriteriaSet<Models.UserGroup>()
+                .Compare(Models.UserGroup.Properties.CodUser,SQLAgent.Criteria.ComparisonOperators.Equals,9)
+                .GetEntitiesDeep()
+                .FirstOrDefault();
+            var result = new SQLAgent.SQLManager().Delete(usergroup.User);
+            var result2 = new SQLAgent.SQLManager().Delete(usergroup);
         }
 
         protected override void InitCommands()

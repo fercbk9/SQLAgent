@@ -1,5 +1,7 @@
 ﻿using Dapper;
 using SQLAgent.Attributes;
+using SQLAgent.DataAccessObject;
+using SQLAgent.Interfaces;
 using SQLAgent.Interfaces.Relations;
 using SQLAgent.Models;
 using SQLAgent.Utilities;
@@ -154,7 +156,7 @@ namespace SQLAgent
         /// <param name="sql">Cadena de texto con la sentencia SQL.</param>
         /// <param name="parameters">Parametros de la sentencia SQL.</param>
         /// <returns></returns>
-        public int DataManipulation(string sql, SqlParameterCollection parameters)
+        public int DataManipulation(string sql, Dictionary<string,object> parameters)
         {
             try
             {
@@ -163,9 +165,9 @@ namespace SQLAgent
                 {
                     this.OpenConnection();
                 }
-                foreach (SqlParameter item in parameters)
+                foreach (var item in parameters)
                 {
-                    cm.Parameters.AddWithValue(item.ParameterName, item.Value);
+                    cm.Parameters.AddWithValue(item.Key, item.Value);
                 }
                 return cm.ExecuteNonQuery();
             }
@@ -178,22 +180,27 @@ namespace SQLAgent
                 this.CloseConnection();
             }
         }
-
         /// <summary>
         /// Metodo para ejecturar insert,update, delete con Dapper.
         /// </summary>
         /// <param name="sql">Sentencia sql con paramatros si los tiene.</param>
         /// <param name="param">Parametros para ejecutar la consulta. Si los tiene.</param>
+        /// <param name="typeCommand">Tipo de comando, si es procedure o query.</param>
+        /// <param name="transaction">objeto de transaccion</param>
+        /// <param name="openConnection">Si se requiere usar el open connection de dentro o no.</param>
         /// <returns></returns>
-        public int Execute(string sql, object param = null, CommandType? typeCommand = null)
+        public int Execute(string sql, object param = null, CommandType? typeCommand = null, IDbTransaction transaction = null, bool openConnection = true)
         {
             try
             {
-                if (SqlConnection.State != ConnectionState.Open)
+                if (openConnection)
                 {
-                    OpenConnection();
+                    if (SqlConnection.State != ConnectionState.Open)
+                    {
+                        OpenConnection();
+                    }
                 }
-                return SqlConnection.Execute(sql, param,commandType: typeCommand);
+                return SqlConnection.Execute(sql, param, commandType: typeCommand, transaction: transaction);
             }
             catch (Exception ex)
             {
@@ -201,7 +208,10 @@ namespace SQLAgent
             }
             finally
             {
-                CloseConnection();
+                if (openConnection)
+                {
+                    CloseConnection();
+                }
             }
         }
 
@@ -250,36 +260,40 @@ namespace SQLAgent
                 EntityT t = new EntityT();
                 var list = GetComplexProperties<EntityT>();
                 var result = SqlConnection.Query<EntityT>(sql, param, commandType: typeCommand);
-                    if (t.Relations.Count > 0 && list.Count > 0)
+                if (t.Relations.Count > 0 && list.Count > 0)
+                {
+                    foreach (var item in result)
                     {
-                        foreach (var item in result)
+                        foreach (var item2 in list)
                         {
-                            foreach (var item2 in list)
+                            IRelation relation = t.Relations[item2.Key];
+                            PropertyInfo property = t.GetType().GetProperty(item2.Key);
+                            Type type = relation.ForeignType;
+                            var foreingEntity = Activator.CreateInstance(type) as BaseModel;
+                            string sql2 = $"select * from {foreingEntity.tableName} {GetWhereWithRelations(relation, foreingEntity.tableName)}";
+                            Dictionary<string, object> parameters = GetParameters(relation, item);
+                            var ie = SelectDeepV2(sql2,type,parameters);
+                            if (typeof(IEnumerable).IsAssignableFrom(property.PropertyType))
                             {
-                                IRelation relation = t.Relations[item2.Key];
-                                PropertyInfo property = t.GetType().GetProperty(item2.Key);
-                                Type type = relation.ForeignType;
-                                var aux = Activator.CreateInstance(type) as BaseModel;
-                                string sql2 = $"select * from {aux.tableName} {GetWhereWithRelations(relation)}";
-                                Dictionary<string, object> parameters = GetParameters(relation, item);
-                                var ie = SelectDeepV2(sql2,type,parameters);
-                                if (typeof(IEnumerable).IsAssignableFrom(property.PropertyType))
-                                {
-                                    var Converted = Converters.ConvertCustom(ie, type);
-                                    property.SetValue(item, Converted);
-                                }
-                                else
-                                {
-                                    property.SetValue(item, ie.FirstOrDefault());
-                                }
-                        }
+                                var Converted = Converters.ConvertCustom(ie, type);
+                                property.SetValue(item, Converted);
+                            }
+                            else
+                            {
+                                property.SetValue(item, ie.FirstOrDefault());
+                            }
                         }
                     }
-                    return result;
+                }
+                return result;
             }
             catch (Exception ex)
             {
                 throw ex;
+            }
+            finally
+            {
+                CloseConnection();
             }
         }
         /// <summary>
@@ -298,7 +312,6 @@ namespace SQLAgent
                 {
                     OpenConnection();
                 }
-                
                 var list = GetComplexProperties(type);
                 var aux = Activator.CreateInstance(type) as BaseModel;
                 var result = SqlConnection.QueryMultiple(sql, param, commandType: typeCommand).Read(type);
@@ -311,8 +324,8 @@ namespace SQLAgent
                             IRelation relation = aux.Relations[item2.Key];
                             PropertyInfo property = aux.GetType().GetProperty(item2.Key);
                             Type type2 = relation.ForeignType;
-                            var aux2 = Activator.CreateInstance(type2) as BaseModel;
-                            string sql2 = $"select * from {aux2.tableName} {GetWhereWithRelations(relation)}";
+                            var foreingEntity = Activator.CreateInstance(type2) as BaseModel;
+                            string sql2 = $"select {foreingEntity.tableName}.* from {foreingEntity.tableName} {GetWhereWithRelations(relation, foreingEntity.tableName)}";
                             Dictionary<string, object> parameters = GetParameters(relation, item);
                             var ie = SelectDeepV2(sql2,type2,parameters);
                             if (typeof(IEnumerable).IsAssignableFrom(property.PropertyType))
@@ -333,6 +346,267 @@ namespace SQLAgent
             {
                 throw ex;
             }
+            finally
+            {
+                CloseConnection();
+            }
+        }
+        /// <summary>
+        /// Metodo para Insert simple, solo de entidad.
+        /// </summary>
+        /// <typeparam name="EntityT">Objeto que hereda de BaseModel.</typeparam>
+        /// <param name="entity">objeto a insertar que hereda de BaseModel.</param>
+        /// <returns></returns>
+        public int Insert<EntityT>(EntityT entity) where EntityT : BaseModel, new()
+        {
+            int result;
+            try
+            {
+                var auxDAO = new BaseDAO<EntityT>(entity.tableName);
+                result = auxDAO.Insert(entity);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            return result;
+        }
+        /// <summary>
+        /// Metodo para Insert con entidades hijas complejas que se pueden modificar en BBDD.
+        /// </summary>
+        /// <typeparam name="EntityT"></typeparam>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        public int InsertDeep<EntityT>(EntityT entity) where EntityT : BaseModel, new()
+        {
+            int result = 0;
+            try
+            {
+                if (SqlConnection.State != ConnectionState.Open)
+                {
+                    OpenConnection();
+                }
+                using var transaction = QueryManager.BeginTransaction();
+                try
+                {
+                    var complexPropsList = GetComplexPropertiesToUpdate(typeof(EntityT));
+                    var auxDAO = new BaseDAO<EntityT>(entity.tableName,this);
+                    result = auxDAO.Insert(entity,null,transaction: transaction,false);
+                    if (entity.Relations.Count > 0 && complexPropsList.Count > 0)
+                    {
+                        foreach (var complexProp in complexPropsList)
+                        {
+                            PropertyInfo property = entity.GetType().GetProperty(complexProp.Key);
+                            var instance = property.GetValue(entity);
+                            if (typeof(IEnumerable).IsAssignableFrom(property.PropertyType))
+                            {
+                                //Insertamos lista de objetos hijos para el type que sea.
+                                var convertedObject = instance as IEnumerable<IBaseModel>;
+                                foreach (var item in convertedObject)
+                                {
+                                    var aux2DAO = new BaseDAO<BaseModel>(item.tableName, this);
+                                    result += aux2DAO.Insert(item,null,transaction,false);
+                                }
+                            }
+                            else
+                            {
+                                //Insertamos objeto simple.
+                                var aux2DAO = new BaseDAO<BaseModel>((instance as IBaseModel)?.tableName, this);
+                                result += aux2DAO.Insert(instance,null,transaction: transaction,false);
+                            }
+                        }
+                    }
+                    transaction.Commit();
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    throw ex;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                CloseConnection();
+            }
+            return result;
+        }
+        /// <summary>
+        /// Metodo para Update simple, solo de entidad.
+        /// </summary>
+        /// <typeparam name="EntityT">Objeto que hereda de BaseModel.</typeparam>
+        /// <param name="entity">objeto a actualizar que hereda de BaseModel.</param>
+        /// <returns></returns>
+        public int Update<EntityT>(EntityT entity) where EntityT : BaseModel, new()
+        {
+            int result;
+            try
+            {
+                var auxDAO = new BaseDAO<EntityT>(entity.tableName);
+                result = auxDAO.Update(entity);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            return result;
+        }
+        /// <summary>
+        /// Metodo para Update con entidades hijas complejas que se pueden modificar en BBDD.
+        /// </summary>
+        /// <typeparam name="EntityT"></typeparam>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        public int UpdateDeep<EntityT>(EntityT entity) where EntityT : BaseModel, new()
+        {
+            int result;
+            try
+            {
+                if (SqlConnection.State != ConnectionState.Open)
+                {
+                    OpenConnection();
+                }
+                using var transaction = QueryManager.BeginTransaction();
+                try
+                {
+                    var complexPropsList = GetComplexPropertiesToUpdate(typeof(EntityT));
+                    var auxDAO = new BaseDAO<EntityT>(entity.tableName, this);
+                    result = auxDAO.Update(entity, null,transaction, false);
+                    if (entity.Relations.Count > 0 && complexPropsList.Count > 0)
+                    {
+                        foreach (var complexProp in complexPropsList)
+                        {
+                            PropertyInfo property = entity.GetType().GetProperty(complexProp.Key);
+                            var instance = property.GetValue(entity);
+                            if (typeof(IEnumerable).IsAssignableFrom(property.PropertyType))
+                            {
+                                //Actualizamos lista de objetos hijos para el type que sea.
+                                var convertedObject = instance as IEnumerable<IBaseModel>;
+                                foreach (var item in convertedObject)
+                                {
+                                    var aux2DAO = new BaseDAO<BaseModel>(item.tableName, this);
+                                    result += aux2DAO.Update(item, null, transaction, false);
+                                }
+                            }
+                            else
+                            {
+                                //Updateamos objeto simple.
+                                var iBaseModel = (instance as IBaseModel);
+                                if (iBaseModel != null)
+                                {
+                                    var aux2DAO = new BaseDAO<BaseModel>(iBaseModel.tableName, this);
+                                    result += aux2DAO.Update(iBaseModel, null, transaction, false);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    throw ex;
+                }
+                transaction.Commit();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                CloseConnection();
+            }
+            return result;      
+        }
+        /// <summary>
+        /// Metodo para Update simple, solo de entidad.
+        /// </summary>
+        /// <typeparam name="EntityT">Objeto que hereda de BaseModel.</typeparam>
+        /// <param name="entity">objeto a actualizar que hereda de BaseModel.</param>
+        /// <returns></returns>
+        public int Delete<EntityT>(EntityT entity) where EntityT : BaseModel, new()
+        {
+            int result;
+            try
+            {
+                var auxDAO = new BaseDAO<EntityT>(entity.tableName);
+                result = auxDAO.Delete(entity);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            return result;
+        }
+        /// <summary>
+        /// Metodo para Delete con entidades hijas complejas que se pueden modificar en BBDD.
+        /// </summary>
+        /// <typeparam name="EntityT"></typeparam>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        public int DeleteDeep<EntityT>(EntityT entity) where EntityT : BaseModel, new()
+        {
+            int result;
+            try
+            {
+                if (SqlConnection.State != ConnectionState.Open)
+                {
+                    OpenConnection();
+                }
+                using var transaction = QueryManager.BeginTransaction();
+                try
+                {
+                    var complexPropsList = GetComplexPropertiesToUpdate(typeof(EntityT));
+                    var auxDAO = new BaseDAO<EntityT>(entity.tableName, this);
+                    result = auxDAO.Delete(entity, null, transaction, false);
+                    if (entity.Relations.Count > 0 && complexPropsList.Count > 0)
+                    {
+                        foreach (var complexProp in complexPropsList)
+                        {
+                            PropertyInfo property = entity.GetType().GetProperty(complexProp.Key);
+                            var instance = property.GetValue(entity);
+                            if (typeof(IEnumerable).IsAssignableFrom(property.PropertyType))
+                            {
+                                //Borranos lista de objetos hijos para el type que sea.
+                                var convertedObject = instance as IEnumerable<IBaseModel>;
+                                foreach (var item in convertedObject)
+                                {
+                                    var aux2DAO = new BaseDAO<BaseModel>(item.tableName, this);
+                                    result += aux2DAO.Delete(item, null, transaction, false);
+                                }
+                            }
+                            else
+                            {
+                                //Borramos objeto simple.
+                                var iBaseModel = (instance as IBaseModel);
+                                if (iBaseModel != null)
+                                {
+                                    var aux2DAO = new BaseDAO<BaseModel>(iBaseModel.tableName, this);
+                                    result += aux2DAO.Delete(iBaseModel, null, transaction, false);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    throw ex;
+                }
+                transaction.Commit();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                CloseConnection();
+            }
+            return result;
         }
         #endregion
         #region Private Methods
@@ -355,7 +629,11 @@ namespace SQLAgent
             );
             return list;
         }
-
+        /// <summary>
+        /// Devolvemos todas las propiedades complejas. Se usara para los selects.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
         private Dictionary<string, Type> GetComplexProperties(Type type)
         {
             var list = new Dictionary<string, Type>();
@@ -370,8 +648,32 @@ namespace SQLAgent
             );
             return list;
         }
-
-        private string GetWhereWithRelations(IRelation relation)
+        /// <summary>
+        /// Devuelve las propiedas complejas que heredan de BaseModel y que además se pueden tocar en base de datos.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        private Dictionary<string, Type> GetComplexPropertiesToUpdate(Type type)
+        {
+            var list = new Dictionary<string, Type>();
+            type.GetProperties().ToList().ForEach(x =>
+            {
+                if (x.GetCustomAttributes<BaseAttribute>().Count() > 0)
+                    if (x.GetCustomAttribute<BaseAttribute>().IsComplexProperty && x.GetCustomAttribute<BaseAttribute>().IsUpdateable)
+                    {
+                        list.Add(x.Name, x.GetType());
+                    }
+            }
+            );
+            return list;
+        }
+        /// <summary>
+        /// Método que devuelve una cadena de texto con la sintaxis de Where para añadir al select.
+        /// </summary>
+        /// <param name="relation"></param>
+        /// <param name="tableName"></param>
+        /// <returns></returns>
+        private string GetWhereWithRelations(IRelation relation,string tableName)
         {
             string where = "";
             if (relation.Details.Count() > 0)
@@ -379,14 +681,21 @@ namespace SQLAgent
                 where = " WHERE ";
                 foreach (var item in relation.Details)
                 {
-                    where += $" {item.ForeignFieldName} = @{item.ForeignFieldName}";
+                    where += $" {tableName}.{item.ForeignFieldName} = @{item.ForeignFieldName}";
                     where += $" AND";
                 }
-                where = where.Substring(0, where.Length - 3);
+                //where.Substring(0, where.Length - 3);
+                where = where[0..^3];
             }
             return where;
         }
-
+        /// <summary>
+        /// Metodo que devuelve los parametros introducir segun la relacion que tienen. Se usa para el select deep.
+        /// </summary>
+        /// <typeparam name="EntityT"></typeparam>
+        /// <param name="relation"></param>
+        /// <param name="entity"></param>
+        /// <returns></returns>
         private Dictionary<string, object> GetParameters<EntityT>(IRelation relation, EntityT entity) where EntityT : BaseModel, new()
         {
             Dictionary<string, object> parameters = null;
@@ -402,7 +711,12 @@ namespace SQLAgent
             }
             return parameters;
         }
-
+        /// <summary>
+        /// Metodo que devuelve los parametros introducir segun la relacion que tienen. Se usa para el select deep V2.
+        /// </summary>
+        /// <param name="relation"></param>
+        /// <param name="entity"></param>
+        /// <returns></returns>
         private Dictionary<string, object> GetParameters(IRelation relation, object entity)
         {
             Dictionary<string, object> parameters = null;

@@ -14,8 +14,8 @@ namespace SQLAgent.Criteria
     public class CriteriaSet<EntityT> where EntityT : Models.BaseModel, new()
     {
         private CriteriaSet cs;
-        public SQLConnection SQLConnection { get; }
-        EntityT model = new EntityT();
+        private SQLManager _manager { get; }
+        private readonly EntityT model = new EntityT();
         private CriteriaSet JoinCriterias;
         private CriteriaSet WhereCriterias;
         public CriteriaSet<EntityT> Compare(string property, ComparisonOperators comparisonOperators, object value)
@@ -65,7 +65,7 @@ namespace SQLAgent.Criteria
             this.cs = new CriteriaSet();
             this.JoinCriterias = new CriteriaSet();
             this.WhereCriterias = new CriteriaSet();
-            this.SQLConnection = new SQLAgent.SQLConnection(model.sQLSetting);
+            this._manager = new SQLManager(Context.SQLContext.sqlSetting);
         }
 
 
@@ -96,7 +96,12 @@ namespace SQLAgent.Criteria
 
         public IEnumerable<EntityT> GetEntities()
         {
-            return SQLConnection.Select<EntityT>(CriteriaSetToSql(), GetParametersFromCriteriaSet());
+            return _manager.Select<EntityT>(CriteriaSetToSql(), GetParametersFromCriteriaSet());
+        }
+
+        public IEnumerable<EntityT> GetEntitiesDeep() 
+        {
+            return _manager.SelectDeep<EntityT>(CriteriaSetToSql(), GetParametersFromCriteriaSet());
         }
 
         /// <summary>
@@ -199,19 +204,14 @@ namespace SQLAgent.Criteria
 
         public string GetComparisonCharacter(ComparisonOperators comparison)
         {
-            switch (comparison)
+            return comparison switch
             {
-                case ComparisonOperators.Equals:
-                    return " = ";
-                case ComparisonOperators.NotEquals:
-                    return " <> ";
-                case ComparisonOperators.BiggerThan:
-                    return " > ";
-                case ComparisonOperators.LowerThan:
-                    return " < ";
-                default:
-                    return "";
-            }
+                ComparisonOperators.Equals => " = ",
+                ComparisonOperators.NotEquals => " <> ",
+                ComparisonOperators.BiggerThan => " > ",
+                ComparisonOperators.LowerThan => " < ",
+                _ => "",
+            };
         }
     }
 }

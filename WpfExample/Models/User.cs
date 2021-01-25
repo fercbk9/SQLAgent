@@ -9,15 +9,21 @@ namespace WpfExample.Models
 
         public const string TableName = "[User]";
         [Base(IsPrimaryKey = true)]
-        public string IDUser { get; set; }
+        public string IDUser
+        {
+            get { return base.ID; }
+            set
+            {
+                base.ID = value;
+            }
+        }
         public string CodUser { get; set; }
         public string Description { get; set; }
         public string IDUserGroup { get; set; }
-        [Base(IsComplexProperty = true,IsUpdateable = false)]
+        [Base(IsComplexProperty = false,IsUpdateable = false)]
         public UserGroup UserGroup { get; set; }
-
         public User()
-            :base(TableName)
+            :base(TableName,Properties.IDUser)
         {
             
         }

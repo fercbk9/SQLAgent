@@ -1,5 +1,9 @@
-﻿using System;
+﻿using SQLAgent.Attributes;
+using SQLAgent.Interfaces;
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
@@ -44,18 +48,13 @@ namespace SQLAgent.DataAccessObject
             Manager = new SQLManager();
         }
 
-        #region IBaseDAO implementation
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        public virtual int Delete(T model)
+        public BaseDAO(string tableName, SQLManager manager)
         {
-            return Manager.Execute(this.GetSqlCommandText(SQLTypes.Delete, this.GetPropertiesCustom(), model), this.GetParameterCollection(model));
+            TableName = tableName;
+            Manager = manager;
         }
 
+        #region IBaseDAO implementation
         /// <summary>
         /// 
         /// </summary>
@@ -118,25 +117,77 @@ namespace SQLAgent.DataAccessObject
         }
 
         /// <summary>
-        /// 
+        /// Insert with reflection.
         /// </summary>
         /// <param name="model"></param>
+        /// <param name="typeCommand"></param>
+        /// <param name="transaction"></param>
+        /// <param name="openConnection"></param>
         /// <returns></returns>
-        public virtual int Insert(T model)
+        public virtual int Insert(T model, CommandType? typeCommand = null, IDbTransaction transaction = null, bool openConnection = true)
         {
-            return Manager.Execute(this.GetSqlCommandText(SQLTypes.Insert, this.GetPropertiesCustom(), model), this.GetParameterCollection(model));
+            return Manager.Execute(GetSqlCommandText(SQLTypes.Insert, GetPropertiesCustom(), model), GetParameterCollection(model),transaction: transaction,openConnection: openConnection);
         }
-
         /// <summary>
-        /// 
+        /// Insert for base action passing the object. Use it for deep methods.
         /// </summary>
         /// <param name="model"></param>
+        /// <param name="typeCommand"></param>
+        /// <param name="transaction"></param>
+        /// <param name="openConnection"></param>
         /// <returns></returns>
-        public virtual int Update(T model)
+        public virtual int Insert(object model, CommandType? typeCommand = null, IDbTransaction transaction = null, bool openConnection = true)
         {
-            return Manager.Execute(this.GetSqlCommandText(SQLTypes.Update, this.GetPropertiesCustom(), model), this.GetParameterCollection(model));
+            return Manager.Execute(GetSqlCommandText(SQLTypes.Insert, GetPropertiesCustom(model)), GetParameterCollection(model),transaction: transaction, openConnection: openConnection, typeCommand: typeCommand);
         }
-
+        /// <summary>
+        /// Update with reflection.
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="typeCommand"></param>
+        /// <param name="transaction"></param>
+        /// <param name="openConnection"></param>
+        /// <returns></returns>
+        public virtual int Update(T model, CommandType? typeCommand = null, IDbTransaction transaction = null, bool openConnection = true)
+        {
+            return Manager.Execute(GetSqlCommandText(SQLTypes.Update, GetPropertiesCustom(), model), GetParameterCollection(model), transaction: transaction, openConnection: openConnection, typeCommand: typeCommand);
+        }
+        /// <summary>
+        /// Update for base action passing the object. Use it for deep methods.
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="typeCommand"></param>
+        /// <param name="transaction"></param>
+        /// <param name="openConnection"></param>
+        /// <returns></returns>
+        public virtual int Update(IBaseModel model, CommandType? typeCommand = null, IDbTransaction transaction = null, bool openConnection = true)
+        {
+            return Manager.Execute(GetSqlCommandText(SQLTypes.Update, GetPropertiesCustom(model),model), GetParameterCollection(model), transaction: transaction, openConnection: openConnection, typeCommand: typeCommand);
+        }
+        /// <summary>
+        /// Delete with reflection.
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="typeCommand"></param>
+        /// <param name="transaction"></param>
+        /// <param name="openConnection"></param>
+        /// <returns></returns>
+        public virtual int Delete(T model, CommandType? typeCommand = null, IDbTransaction transaction = null, bool openConnection = true)
+        {
+            return Manager.Execute(GetSqlCommandText(SQLTypes.Delete, GetPropertiesCustom(), model), GetParameterCollection(model), transaction: transaction, openConnection: openConnection, typeCommand: typeCommand);
+        }
+        /// <summary>
+        /// Delete for base action only passing the object. Use it for deep methods.
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="typeCommand"></param>
+        /// <param name="transaction"></param>
+        /// <param name="openConnection"></param>
+        /// <returns></returns>
+        public virtual int Delete(IBaseModel model, CommandType? typeCommand = null, IDbTransaction transaction = null, bool openConnection = true)
+        {
+            return Manager.Execute(GetSqlCommandText(SQLTypes.Delete, GetPropertiesCustom(model),model), GetParameterCollection(model), transaction: transaction, openConnection: openConnection, typeCommand: typeCommand);
+        }
         #endregion
 
         #region Private methods
@@ -149,7 +200,14 @@ namespace SQLAgent.DataAccessObject
         private ICollection<PropertyInfo> GetPropertiesCustom()
         {
             Type objType = typeof(T);
-            return objType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(property => property.CanWrite && property.DeclaringType.Name != "BaseModel").ToList();
+            return objType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(property => property.CanWrite && property.DeclaringType.Name != "BaseModel" && !property.GetCustomAttributes<BaseAttribute>().Where(x => x.IsComplexProperty || (!x.IsComplexProperty && !x.IsPrimaryKey)).Any()).ToList();
+
+        }
+
+        private ICollection<PropertyInfo> GetPropertiesCustom(object model)
+        {
+            Type objType = model.GetType();
+            return objType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(property => property.CanWrite && property.DeclaringType.Name != "BaseModel" && !property.GetCustomAttributes<BaseAttribute>().Where(x => x.IsComplexProperty || (!x.IsComplexProperty && !x.IsPrimaryKey)).Any()).ToList();
 
         }
 
@@ -169,7 +227,7 @@ namespace SQLAgent.DataAccessObject
         /// <param name="properties"></param>
         /// <param name="model"></param>
         /// <returns></returns>
-        private string GetSqlCommandText(SQLTypes sqlType, ICollection<PropertyInfo> properties = null, T model = null)
+        /*private string GetSqlCommandText(SQLTypes sqlType, ICollection<PropertyInfo> properties = null, T model = null)
         {
             string sqlCommandText = String.Empty;
             switch (sqlType)
@@ -190,7 +248,30 @@ namespace SQLAgent.DataAccessObject
                     sqlCommandText = this.GetPropertyStringForGetByID(model.IDName);
                     break;
             }
+            return sqlCommandText;
+        }*/
 
+        private string GetSqlCommandText(SQLTypes sqlType, ICollection<PropertyInfo> properties = null, IBaseModel model = null)
+        {
+            string sqlCommandText = String.Empty;
+            switch (sqlType)
+            {
+                case SQLTypes.Insert:
+                    sqlCommandText = GetPropertyStringForInsert(properties);
+                    break;
+                case SQLTypes.Update:
+                    sqlCommandText = this.GetPropertyStringForUpdate(properties, model.IDName);
+                    break;
+                case SQLTypes.Delete:
+                    sqlCommandText = this.GetPropertyStringForDelete(GetPrimaryKeyProperties(model));
+                    break;
+                case SQLTypes.SelectAll:
+                    sqlCommandText = this.GetPropertyStringForGetAll();
+                    break;
+                case SQLTypes.GetById:
+                    sqlCommandText = this.GetPropertyStringForGetByID(model.IDName);
+                    break;
+            }
             return sqlCommandText;
         }
 
@@ -231,9 +312,9 @@ namespace SQLAgent.DataAccessObject
         /// </summary>
         /// <param name="properties"></param>
         /// <returns></returns>
-        private string GetPropertyStringForDelete(List<string> primaryKeyProperties)
+        private string GetPropertyStringForDelete(ICollection<PropertyInfo> primaryKeyProperties)
         {
-            return "DELETE FROM " + TableName + " WHERE " + primaryKeyProperties.Select(x => x + "=@" + x);
+            return "DELETE FROM " + TableName + " WHERE " + String.Join(" AND ", primaryKeyProperties.Select(x => x.Name + " = @" + x.Name));
 
         }
 
@@ -283,10 +364,24 @@ namespace SQLAgent.DataAccessObject
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        private SqlParameterCollection GetParameterCollection(T model)
+        /*private SqlParameterCollection GetParameterCollection(T model)
         {
             SqlParameterCollection sqlParameterCollection = new SqlCommand().Parameters;
             this.GetPropertiesCustom().ToList().ForEach(prop => sqlParameterCollection.AddWithValue(prop.Name, prop.GetValue(model) ?? DBNull.Value));
+            return sqlParameterCollection;
+        }*/
+
+        private Dictionary<string,object> GetParameterCollection(T model)
+        {
+            Dictionary<string, object> sqlParameterCollection = new Dictionary<string, object>();
+            this.GetPropertiesCustom().ToList().ForEach(prop => sqlParameterCollection.Add(prop.Name, prop.GetValue(model) ?? DBNull.Value));
+            return sqlParameterCollection;
+        }
+
+        private Dictionary<string, object> GetParameterCollection(object model)
+        {
+            Dictionary<string, object> sqlParameterCollection = new Dictionary<string, object>();
+            GetPropertiesCustom(model).ToList().ForEach(prop => sqlParameterCollection.Add(prop.Name, prop.GetValue(model) ?? DBNull.Value));
             return sqlParameterCollection;
         }
 
@@ -296,14 +391,28 @@ namespace SQLAgent.DataAccessObject
             var list = new List<string>();
             model.GetType().GetProperties().ToList().ForEach(x => 
                 {
-                    if(x.GetCustomAttributes<Attributes.BaseAttribute>().Count() > 0)
-                    if (x.GetCustomAttribute<Attributes.BaseAttribute>().IsPrimaryKey)
+                    if(x.GetCustomAttributes<BaseAttribute>().Count() > 0)
+                    if (x.GetCustomAttribute<BaseAttribute>().IsPrimaryKey)
                     {
                         list.Add(x.Name);
                     }
                 }
             );
             return list;
+        }
+        private ICollection<PropertyInfo> GetPrimaryKeyProperties(object model)
+        {
+            var listaux = new Collection<PropertyInfo>();
+            model.GetType().GetProperties().ToList().ForEach(x =>
+            {
+                if (x.GetCustomAttributes<BaseAttribute>().Count() > 0)
+                    if (x.GetCustomAttribute<BaseAttribute>().IsPrimaryKey)
+                    {
+                        listaux.Add(x);
+                    }
+            }
+            );
+            return listaux;
         }
         #endregion
 
