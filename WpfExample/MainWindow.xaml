@@ -32,7 +32,7 @@
         <ListBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding UserGroups}" Name="list">
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <WrapPanel Orientation="Horizontal" Width="200"/>
+                    <WrapPanel Orientation="Horizontal" Width="auto"/>
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
@@ -41,6 +41,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="132*"/>
                             <ColumnDefinition Width="200*"/>
+                            <ColumnDefinition Width="auto"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition/>
@@ -52,6 +53,7 @@
                         </Grid>
                         <TextBlock Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding CodUserGroup}" FontSize="16" VerticalAlignment="Center"/>
                         <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding Description}" TextWrapping="Wrap"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="3" Text="{Binding User.Description}" TextWrapping="Wrap"/>
                     </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>

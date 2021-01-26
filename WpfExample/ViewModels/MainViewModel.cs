@@ -26,12 +26,10 @@ namespace WpfExample.ViewModels
         public MainViewModel() : base()
         {
             //var Users = new SQLAgent.SQLManager().SelectDeep<Models.User>("Select * from [User]");
-            var usergroup = new SQLAgent.Criteria.CriteriaSet<Models.UserGroup>()
-                .Compare(Models.UserGroup.Properties.CodUser,SQLAgent.Criteria.ComparisonOperators.Equals,8)
-                .GetEntitiesDeep()
-                .FirstOrDefault();
-            var result = new SQLAgent.DataAccessObject.BaseDAO<Models.User>(Models.User.TableName).Delete(usergroup.User);
-            var result2 = new SQLAgent.DataAccessObject.BaseDAO<Models.UserGroup>(Models.UserGroup.TableName).Delete(usergroup);
+            UserGroups = new SQLAgent.Criteria.CriteriaSet<Models.UserGroup>()
+                .GetEntitiesDeep().ToList();
+            /*var result = new SQLAgent.DataAccessObject.BaseDAO<Models.User>(Models.User.TableName).Delete(usergroup.User);
+            var result2 = new SQLAgent.DataAccessObject.BaseDAO<Models.UserGroup>(Models.UserGroup.TableName).Delete(usergroup);*/
 
         }
 
