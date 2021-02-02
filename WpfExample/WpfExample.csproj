@@ -7,9 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="HandyControl" Version="2.5.0.2" />
+    <PackageReference Include="Autofac" Version="6.1.0" />
+    <PackageReference Include="Autofac.Configuration" Version="6.0.0" />
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.1.0" />
+    <PackageReference Include="CommonServiceLocator" Version="2.0.6" />
+    <PackageReference Include="HandyControl" Version="3.0.0" />
+    <PackageReference Include="MvvmLight" Version="5.4.1.1" />
+    <PackageReference Include="MvvmLightLibs" Version="5.4.1.1" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="ReactiveUI" Version="11.5.35" />
+    <PackageReference Include="ReactiveUI" Version="13.1.1" />
   </ItemGroup>
 
   <ItemGroup>

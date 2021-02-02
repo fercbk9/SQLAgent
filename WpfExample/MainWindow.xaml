@@ -4,10 +4,11 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WpfExample"
-        xmlns:vm="clr-namespace:WpfExample.ViewModels"
+        xmlns:vm="clr-namespace:WpfExample.Locator"
         xmlns:hc="https://handyorg.github.io/handycontrol"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="450" Width="800"
+        >
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="25*"></ColumnDefinition>
@@ -68,6 +69,6 @@
         <Button Command="{Binding Command}" Grid.Row="1" CommandParameter="{Binding ElementName=Hola}">Pulse</Button>
     </Grid>
     <Window.DataContext>
-        <vm:MainViewModel x:Name="MainVM"/>
+        <Binding Source="{StaticResource Locator}" Path="Main"></Binding>
     </Window.DataContext>
 </Window>

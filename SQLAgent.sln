@@ -7,8 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SQLAgent", "SQLAgent\SQLAge
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WpfExample", "WpfExample\WpfExample.csproj", "{824BC658-7646-4802-BE66-19F5D0763732}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BaseWPF", "..\BaseWPF\BaseWPF.csproj", "{103E76C7-47D4-4E8F-A9B0-6D37C9BA6701}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,10 +21,6 @@ Global
 		{824BC658-7646-4802-BE66-19F5D0763732}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{824BC658-7646-4802-BE66-19F5D0763732}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{824BC658-7646-4802-BE66-19F5D0763732}.Release|Any CPU.Build.0 = Release|Any CPU
-		{103E76C7-47D4-4E8F-A9B0-6D37C9BA6701}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{103E76C7-47D4-4E8F-A9B0-6D37C9BA6701}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{103E76C7-47D4-4E8F-A9B0-6D37C9BA6701}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{103E76C7-47D4-4E8F-A9B0-6D37C9BA6701}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
